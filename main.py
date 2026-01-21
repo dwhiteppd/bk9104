@@ -14,6 +14,14 @@ MAX_CURRENT = 10
 
 class BK9104:
     def __init__(self, port: str, baudrate: int = 9600, timeout: int = 1, connect: bool = True):
+        """Initialize the BK9104 power supply interface
+
+        Args:
+            port: COM port or device path.
+            baudrate: Baud rate for the serial connection. Defaults to 9600.
+            timeout: Read timeout in seconds. Defaults to 1.
+            connect: Whether to connect immediately on initialization. Defaults to True.
+        """
         self.port = port
         self.baudrate = baudrate
         self.timeout = timeout
@@ -24,6 +32,12 @@ class BK9104:
             self.connect()
 
     def update(self, channel:int = 0, quiet:bool = False):
+        """Update the voltage and current readings from the power supply
+
+        Args:
+            channel: The channel to read from. Defaults to 0.
+            quiet: If True, suppress output. Defaults to False.
+        """
         voltage, current = 0.0, 0.0
         self._transmit(f'GETS{channel}\r\n', quiet=quiet)
         response = self._receive()
@@ -39,6 +53,11 @@ class BK9104:
         self.current = current
 
     def connect(self) -> bool:
+        """Connect to the BK9104 power supply
+
+        Returns:
+            True if connection was successful, False otherwise.
+        """
         try:
             self.ser = serial.Serial(self.port, self.baudrate, timeout=self.timeout)
             print(f"Connected to BK9104 on {self.port} at {self.baudrate} baud.")
@@ -47,11 +66,41 @@ class BK9104:
             print(f"Error connecting to BK9104: {e}")
             return False
 
+    def disconnect(self) -> bool:
+        """Disconnect from the BK9104 power supply
+
+        Returns:
+            True if disconnection was successful, False otherwise.
+        """
+        if self.ser and self.ser.is_open:
+            self.ser.close()
+            print("Disconnected from BK9104.")
+            return True
+        else:
+            print("Serial connection is not open.")
+            return False
+
     def cmd(self, command: str):
+        """Send a command to the BK9104 power supply and receive the response
+
+        Args:
+            command: The command string to send.
+
+        Returns:
+            A list of response lines from the power supply.
+        """
         self._transmit(command + '\r\n')
         return self._receive()
 
     def _transmit(self, command: str, quiet:bool = False) -> bool:
+        """Transmit a command to the BK9104 power supply
+
+        Args:
+            command: The command string to send.
+            quiet: If True, suppress output. Defaults to False.
+        Returns:
+            True if the command was successfully transmitted, False otherwise.
+        """
         if self.ser and self.ser.is_open:
             rc = self.ser.write(command.encode())
             if rc:
@@ -66,6 +115,14 @@ class BK9104:
             return False
 
     def _receive(self, quiet:bool = False) -> List[str]:
+        """Receive response lines from the BK9104 power supply
+
+        Args:
+            quiet: If True, suppress output. Defaults to False.
+
+        Returns:
+            A list of response lines from the power supply.
+        """
         time.sleep(1)
         response_list = []
         lines = []
@@ -84,6 +141,14 @@ class BK9104:
         return response_list
 
     def set_voltage(self, v:float, channel:int = 0) -> bool:
+        """Set the voltage for a specific channel
+
+        Args:
+            v: The voltage value to set.
+            channel: The channel number. Defaults to 0.
+        Returns:
+            True if the voltage was successfully set, False otherwise.
+        """
         self.update(channel, quiet=True)
         if v * self.current > MAX_WATTAGE:
             print(f"Cannot set voltage: Max wattage restricted to {MAX_WATTAGE}")
@@ -93,7 +158,7 @@ class BK9104:
         return True
 
     def set_current(self, c:float, channel:int = 0) -> bool:
-        self.update(channel, quiet=True)
+        self.update(channel)
         if c * self.voltage > MAX_WATTAGE:
             print(f"Cannot set current: Max wattage restricted to {MAX_WATTAGE}")
             return False
@@ -118,20 +183,32 @@ class BK9104:
         return -1
 
 def main():
+    ONE_HOUR = 3600
     bkp = BK9104(port='/dev/ttyUSB0', baudrate=9600, connect=False)
     bkp.connect()
     bkp.update(channel=0)
     bkp.set_current(0.5, channel=0)
-    bkp.set_voltage(12.0, channel=0)
+    bkp.set_voltage(0.0, channel=0)
     bkp.set_enable(True)
+    step_length = ONE_HOUR
     
-    while True:
-        bkp.set_voltage(12.0, channel=0)
-        time.sleep(5)
-        bkp.set_voltage(16.0, channel=0)
-        time.sleep(5)
-        bkp.set_voltage(20.0, channel=0)
-        time.sleep(5)
+    try:
+        while True:
+            bkp.set_voltage(12.0, channel=0)
+            time.sleep(step_length)
+            bkp.set_voltage(24.0, channel=0)
+            time.sleep(step_length)
+            bkp.set_voltage(36.0, channel=0)
+            time.sleep(step_length)
+            bkp.set_voltage(48.0, channel=0)
+            time.sleep(step_length)
+    except KeyboardInterrupt:
+        print("Interrupted by user. Shutting down.")
+        bkp.set_voltage(0.0, channel=0)
+        bkp.set_enable(False)
+        bkp.disconnect()
+        quit()
+
 
 if __name__ == "__main__":
     main()
