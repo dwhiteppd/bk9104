@@ -11,6 +11,9 @@ MAX_WATTAGE = 320
 MAX_VOLTAGE = 84
 MAX_CURRENT = 10
 
+TX_COLOR = "\033[0;32m"
+RX_COLOR = "\033[0;33m"
+END_COLOR = "\033[0m"
 
 class BK9104:
     def __init__(self, port: str, baudrate: int = 9600, timeout: int = 1, connect: bool = True):
@@ -93,13 +96,12 @@ class BK9104:
         command = command.strip()
         if not quiet:
             print("--------------------------------")
-            print(f"Sending: {command}")
+            print(f"{TX_COLOR}{command}{END_COLOR}")
         self._transmit(command + '\r\n')
         ret = self._receive()
         if not quiet:
-            print("Received:")
             for line in ret:
-                print(f"  {line}")
+                print(f"{RX_COLOR}<--  {line}{END_COLOR}")
             print("--------------------------------\r\n")
         return ret
 
