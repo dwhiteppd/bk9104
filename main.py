@@ -39,15 +39,16 @@ class BK9104:
             quiet: If True, suppress output. Defaults to False.
         """
         voltage, current = 0.0, 0.0
-        self._transmit(f'GETS{channel}\r\n', quiet=quiet)
-        response = self._receive()
+        response = self.cmd(f'GETS{channel}', quiet=quiet)
         pattern = re.compile(r"^(?P<voltage>\d{4})(?P<current>\d{4})$")
         for line in response:
             match = pattern.match(line)
             if match:
                 voltage = int(match["voltage"]) / 100.0
                 current = int(match["current"]) / 100.0
-                print(f"Channel {channel} - Voltage: {voltage} V, Current: {current} A, Power: {voltage * current} W")
+                enabled = self.get_enable()
+                out_string = 'ON' if enabled == 1 else 'OFF' if enabled == 0 else 'UNKNOWN'
+                print(f"Channel {channel} | {voltage} V | {current} A | {voltage * current} W | OUTPUT: {out_string}")
 
         self.voltage = voltage
         self.current = current
@@ -85,42 +86,45 @@ class BK9104:
 
         Args:
             command: The command string to send.
-
+            quiet: If True, suppress output. Defaults to False.
         Returns:
             A list of response lines from the power supply.
         """
-        self._transmit(command + '\r\n', quiet=quiet)
-        return self._receive(quiet=quiet)
+        command = command.strip()
+        if not quiet:
+            print("--------------------------------")
+            print(f"Sending: {command}")
+        self._transmit(command + '\r\n')
+        ret = self._receive()
+        if not quiet:
+            print("Received:")
+            for line in ret:
+                print(f"  {line}")
+            print("--------------------------------\r\n")
+        return ret
 
-    def _transmit(self, command: str, quiet:bool = False) -> bool:
+    def _transmit(self, command: str) -> bool:
         """Transmit a command to the BK9104 power supply
 
         Args:
             command: The command string to send.
-            quiet: If True, suppress output. Defaults to False.
         Returns:
             True if the command was successfully transmitted, False otherwise.
         """
         if self.ser and self.ser.is_open:
             rc = self.ser.write(command.encode())
-            
             time.sleep(0.1)
             if rc:
-                if not quiet:
-                    print(f"Sent --> {command}")
                 return True
             else:
                 print(f"Failed to send command: {command}")
                 return False
         else:
-            print("Serial connection is not open.")
+            print("Error: Serial connection is not open.")
             return False
 
-    def _receive(self, quiet:bool = False) -> List[str]:
+    def _receive(self) -> List[str]:
         """Receive response lines from the BK9104 power supply
-
-        Args:
-            quiet: If True, suppress output. Defaults to False.
 
         Returns:
             A list of response lines from the power supply.
@@ -133,11 +137,8 @@ class BK9104:
             for line in lines:
                 sub_lines = line.split('\r')
                 response_list.extend(sub_lines)
-            if not quiet:
-                for line in response_list:
-                    print(f"Recv <-- {line}")
         else:
-            print("Serial connection is not open.")
+            print("Error: Serial connection is not open.")
 
         return response_list
 
