@@ -216,8 +216,8 @@ def main():
             i += 1
     except KeyboardInterrupt:
         print("Interrupted by user. Shutting down.")
-        bkp.set_voltage(0.0, channel=0)
-        bkp.set_enable(False)
+        bkp.set_voltage(0.0, channel=0, quiet=True)
+        bkp.set_enable(False, quiet=True)
         bkp.disconnect()
         quit()
 
