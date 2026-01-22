@@ -157,6 +157,7 @@ class BK9104:
         if v * self.current > MAX_WATTAGE:
             print(f"Cannot set voltage: Max wattage restricted to {MAX_WATTAGE}")
             return False
+        print(f"Setting voltage to {v} V on channel {channel}")
         self.cmd(f"VOLT{channel}{int(v * 100):04d}")
         self.voltage = v
         return True
@@ -166,11 +167,13 @@ class BK9104:
         if c * self.voltage > MAX_WATTAGE:
             print(f"Cannot set current: Max wattage restricted to {MAX_WATTAGE}")
             return False
+        print(f"Setting current to {c} A on channel {channel}")
         self.cmd(f"CURR{channel}{int(c * 100):04d}", quiet=quiet)
         self.current = c
         return True
 
     def set_enable(self, enable:bool = True, quiet:bool = False) -> bool:
+        print(f"{'Enabling' if enable else 'Disabling'} output")
         self.cmd(f"SOUT{'1' if enable else '0'}", quiet=quiet)
         return self.get_enable() == enable
 
@@ -182,8 +185,6 @@ class BK9104:
                 return 1
             elif line.strip() == "0":
                 return 0
-            if line.startswith("OK"):
-                break
         return -1
 
 def main():
@@ -197,15 +198,22 @@ def main():
     step_length = ONE_HOUR
     
     try:
+        i = 1
         while True:
+            print(f"--- Cycle {i} ---")
+            print("Setting to 12v")
             bkp.set_voltage(12.0, channel=0)
             time.sleep(step_length)
+            print("Setting to 24v")
             bkp.set_voltage(24.0, channel=0)
             time.sleep(step_length)
+            print("Setting to 36v")
             bkp.set_voltage(36.0, channel=0)
             time.sleep(step_length)
+            print("Setting to 48v")
             bkp.set_voltage(48.0, channel=0)
             time.sleep(step_length)
+            i += 1
     except KeyboardInterrupt:
         print("Interrupted by user. Shutting down.")
         bkp.set_voltage(0.0, channel=0)
