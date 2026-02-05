@@ -223,8 +223,8 @@ def main(args: Union[None, List[str]] = None):
                 print("Setting to 30v")
                 bkp.set_voltage(30.0, channel=0)
                 time.sleep(step_length)
-                print("Setting to 60v")
-                bkp.set_voltage(60.0, channel=0)
+                print("Setting to 65v")
+                bkp.set_voltage(65.0, channel=0)
                 time.sleep(step_length)
                 i += 1
     except KeyboardInterrupt:
