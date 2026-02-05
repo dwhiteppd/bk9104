@@ -3,6 +3,7 @@
 # BK Precision 9104 Power Supply Control Module
 
 import re
+from sys import argv
 from typing import List, Union
 import serial
 import time
@@ -187,33 +188,45 @@ class BK9104:
                 return 0
         return -1
 
-def main():
+def main(args: Union[None, List[str]] = None):
     ONE_HOUR = 3600
+    HALF_HOUR = 1800
     bkp = BK9104(port='/dev/ttyUSB0', baudrate=9600, connect=False)
     bkp.connect()
     bkp.update(channel=0)
     bkp.set_current(0.5, channel=0, quiet=True)
     bkp.set_voltage(0.0, channel=0, quiet=True)
     bkp.set_enable(True, quiet=True)
-    step_length = ONE_HOUR
+    step_length = HALF_HOUR
+    TEST = int(argv[1])  # 1 for 12v-48v test, 2 for 30v-60v test
     
     try:
         i = 1
         while True:
-            print(f"--- Cycle {i} ---")
-            print("Setting to 12v")
-            bkp.set_voltage(12.0, channel=0)
-            time.sleep(step_length)
-            print("Setting to 24v")
-            bkp.set_voltage(24.0, channel=0)
-            time.sleep(step_length)
-            print("Setting to 36v")
-            bkp.set_voltage(36.0, channel=0)
-            time.sleep(step_length)
-            print("Setting to 48v")
-            bkp.set_voltage(48.0, channel=0)
-            time.sleep(step_length)
-            i += 1
+            if TEST == 1:
+                print(f"--- Cycle {i} ---")
+                print("Setting to 12v")
+                bkp.set_voltage(12.0, channel=0)
+                time.sleep(step_length)
+                print("Setting to 24v")
+                bkp.set_voltage(24.0, channel=0)
+                time.sleep(step_length)
+                print("Setting to 36v")
+                bkp.set_voltage(36.0, channel=0)
+                time.sleep(step_length)
+                print("Setting to 48v")
+                bkp.set_voltage(48.0, channel=0)
+                time.sleep(step_length)
+                i += 1
+            elif TEST == 2:
+                print(f"--- Cycle {i} ---")
+                print("Setting to 30v")
+                bkp.set_voltage(30.0, channel=0)
+                time.sleep(step_length)
+                print("Setting to 60v")
+                bkp.set_voltage(60.0, channel=0)
+                time.sleep(step_length)
+                i += 1
     except KeyboardInterrupt:
         print("Interrupted by user. Shutting down.")
         bkp.set_voltage(0.0, channel=0, quiet=True)
